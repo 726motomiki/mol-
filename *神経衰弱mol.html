@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Mole Game</title>
+  <style>
+    /* カードのスタイル */
+    td.card {
+      width: 100px;
+      height: 140px;
+      border: 1px solid blue;
+      border-radius: 10px;
+      text-align: center;
+      font-size: 30px;
+      background-color: white;
+      background-image: url("cardback2.png");
+      background-size: cover;
+      cursor: pointer;
+    }
+    
+    /* カードの種類ごとのスタイル */
+    td.mole { color: #008000 }
+    td.volume { color: #0000FF }
+  </style>
+  <script>
+    "use strict";
+
+    // 配列シャッフル関数の追加
+    Array.prototype.shuffle = function () {
+      let i = this.length;
+      while (i) {
+        let j = Math.floor(Math.random() * i);
+        let t = this[--i];
+        this[i] = this[j];
+        this[j] = t;
+      }
+      return this;
+    };
+
+    // 数値比較関数
+    function areNumbersEqual(value1, value2, epsilon) {
+      return Math.abs(value1 - value2) < epsilon;
+    }
+
+    // ゲーム用変数
+    let timer = NaN;
+    let flipTimer = NaN;
+    let score = 0;
+    let prevCard = null;
+    let startTime = null;
+
+    // ゲームの初期化
+function init() {
+  let table = document.getElementById("table");
+
+  // カードの情報
+  let cards = [];
+  let substances = ["1.0 mol", "2.0 mol", "0.50 mol"];
+  let volumes = ["22.4 L", "44.8 L", "11.2 L"];
+  
+  // カードをシャッフル
+  for (let i = 0; i < substances.length; i++) {
+    cards.push({ type: "mole", value: substances[i] });
+    cards.push({ type: "volume", value: volumes[i] });
+  }
+  cards.shuffle();
+
+  const cardsPerRow = 6; // 1行あたりのカードの数
+  let currentRow = null;
+
+  // カードを表示
+  for (let i = 0; i < cards.length; i++) {
+    if (i % cardsPerRow === 0) {
+      currentRow = document.createElement("tr"); // 新しい行を作成
+      table.appendChild(currentRow); // 行をテーブルに追加
+    }
+    
+    let td = document.createElement("td"); // 列を作成
+    td.className = "card";
+    td.type = cards[i].type;
+    td.textContent = "";
+    td.value = cards[i].value;
+    td.addEventListener("click", flip); // クリック時のハンドラ登録
+    
+    currentRow.appendChild(td); // 列を行に追加
+  }
+
+  startTime = new Date(); // ゲーム開始時刻を保存
+  timer = setInterval(tick, 1000); // タイマー開始
+    }
+
+    // 経過時間計測
+    function tick() {
+      let now = new Date();
+      let elapsed = Math.floor((now.getTime() - startTime.getTime()) / 1000);
+      document.getElementById("time").textContent = elapsed; // 経過時刻を表示
+    }
+
+    // 数値の比較
+function areValuesEqual(value1, value2) {
+  const epsilon = 0.0001; // 数値比較の許容範囲
+  const numberValue1 = parseFloat(value1);
+  const numberValue2 = parseFloat(value2);
+  
+  // 特定のカード値に対して数値的な等価性を判定
+  if ((value1 === "1.0 mol" && value2 === "22.4 L") || 
+      (value1 === "22.4 L" && value2 === "1.0 mol") ||
+      (value1 === "2.0 mol" && value2 === "44.8 L") ||
+      (value1 === "44.8 L" && value2 === "2.0 mol") ||
+      (value1 === "0.50 mol" && value2 === "11.2 L") ||
+      (value1 === "11.2 L" && value2 === "0.50 mol")) {
+    return true;
+  }
+  
+  return Math.abs(numberValue1 - numberValue2) < epsilon;
+}
+
+
+    // カードを裏返す処理
+    function flip(e) {
+      let src = e.currentTarget; // クリックされた要素
+      if (flipTimer || src.textContent !== "") {
+        return; // 裏向きやすでぇ
+      }
+
+      src.className = "card " + src.type; // クラスを設定して表向きに
+      src.textContent = src.value; // カードの値を表示
+
+      // 1枚目の時は、それを記録して関数を抜ける
+      if (prevCard == null) {
+        prevCard = src;
+        return;
+      }
+
+      // 2枚目 - カード一致判定
+      if (areValuesEqual(prevCard.value, src.value)) {
+        if (++score == 3 * 2) {
+          clearInterval(timer); // すべて揃ったらタイマーを止める
+        }
+        prevCard.removeEventListener("click", flip); // ペアが揃ったカードのクリックハンドラはもう要らんわ
+        src.removeEventListener("click", flip); // ペアが揃ったカードのクリックハンドラももういらんわ
+        prevCard = null;
+        clearTimeout(flipTimer); // 裏返すタイマーも止めとくでぇ
+      } else {
+        // カード不一致の場合は1秒後にカード2枚を裏返しにする
+        flipTimer = setTimeout(function () {
+          src.className = "card";
+          src.textContent = ""; // 裏向きにもどしとくでぇ
+          prevCard.className = "card";
+          prevCard.textContent = ""; // ほんで、もっかい裏向きにもどしとくでぇ
+          prevCard = null;
+          flipTimer = NaN;
+        }, 1000);
+      }
+    }
+  </script>
+</head>
+<body onload="init()">
+  <table id="table"></table>
+  <h2>経過時間：<span id="time">0</span>秒</h2>
+</body>
+</html>
